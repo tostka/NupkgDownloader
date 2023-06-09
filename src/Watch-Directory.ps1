@@ -1,6 +1,11 @@
 #All credit to https://powershell.one/tricks/filesystem/filesystemwatcher
 
-$global:ProgressCounter=1
+$global:ProgressCounterStart=1
+$global:ProgressCounterReset=25
+$global:ProgressCounterMax=100
+
+$global:ProgressCounter=$global:ProgressCounterStart
+
 Function Watch-Directory {
     Param([string]$Path=$pwd)
 
@@ -22,57 +27,11 @@ Function Watch-Directory {
 
     # define the code that should execute when a change occurs:
     $action = {
-        # the code is receiving this to work with:
-        
-        # change type information:
-        $details = $event.SourceEventArgs
-        $Name = $details.Name
-        $FullPath = $details.FullPath
-        $OldFullPath = $details.OldFullPath
-        $OldName = $details.OldName
-        
-        # type of change:
-        $ChangeType = $details.ChangeType
-        
-        # when the change occured:
-        $Timestamp = $event.TimeGenerated
-        
-        # save information to a global variable for testing purposes
-        # so you can examine it later
-        # MAKE SURE YOU REMOVE THIS IN PRODUCTION!
-        #$global:all = $details
-        
-        # now you can define some action to take based on the
-        # details about the change event:
-        
-        # let's compose a message:
-        $text = "{0} was {1} at {2}" -f $FullPath, $ChangeType, $Timestamp
-        
-        # you can also execute code based on change type here:
-
         $global:ProgressCounter++
-        if($global:ProgressCounter -gt 100) {
-            $global:ProgressCounter=1
+        if($global:ProgressCounter -gt $global:ProgressCounterMax) {
+            $global:ProgressCounter=$global:ProgressCounterReset
         }
         Write-Progress -Activity "Download" -PercentComplete $global:ProgressCounter
-        # switch ($ChangeType)
-        # {
-        # 'Created'  { "CREATED" 
-        #     Write-Progress -Activity "Download" -PercentComplete $global:ProgressCounter
-        # }
-        # 'Changed'  { "CHANGE" 
-        #     Write-Progress -Activity "Download" -PercentComplete $global:ProgressCounter
-        # }
-        # 'Renamed'  { 
-        #     Write-Progress -Activity "Download" -PercentComplete $global:ProgressCounter
-        # }
-        # 'Deleted'  { "DELETED"
-        #    Write-Progress -Activity "Download" -PercentComplete $global:ProgressCounter
-        # }
-            
-        # # any unhandled change types surface here:
-        # default   { Write-Progress -Activity "Download" -PercentComplete $counter++ }
-        #}
     }
 
     # subscribe your event handler to all event types that are
@@ -92,7 +51,6 @@ Function Watch-Directory {
         Watcher = $watcher;
         Handlers = $handlers
     }
-    #Write-Host "Watching for changes to $Path"
 
     return $watchObject;
 }
@@ -100,17 +58,11 @@ Function Watch-Directory {
 
 Function Unwatch-Directory {
     Param([Parameter(Mandatory=$true)][object]$WatcherObject)
-    # since the FileSystemWatcher is no longer blocking PowerShell
-    # we need a way to pause PowerShell while being responsive to
-    # incoming events. Use an endless loop to keep PowerShell busy:
 
-    Write-Progress -Activity "Download" -PercentComplete 100
 
     $watcher = $WatcherObject.Watcher;
     $handlers = $WatcherObject.Handlers;
 
-    # this gets executed when user presses CTRL+C:
-    
     # stop monitoring
     $watcher.EnableRaisingEvents = $false
     
@@ -126,6 +78,5 @@ Function Unwatch-Directory {
     # properly dispose the FileSystemWatcher:
     $watcher.Dispose()
     
-    #Write-Warning "Event Handler disabled, monitoring ends."
-    #Write-Host "#"
+    Write-Progress -Activity "Download" -PercentComplete 100
 }

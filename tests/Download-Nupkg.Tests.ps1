@@ -6,7 +6,9 @@ Describe "Download-Nupkg"  {
     BeforeEach {
         Mock Test-Path { $True } 
         Mock Remove-Item { }
-        Mock Start-Process { }
+        Mock Start-Process { 
+            New-MockObject -Type System.Diagnostics.Process -Methods @{ WaitForExit = { param($delay) $true } } 
+        }
         Mock Write-Host { }
         Mock New-TemporaryDirectory  {
             $parent = [System.IO.Path]::GetTempPath()
@@ -31,6 +33,17 @@ Describe "Download-Nupkg"  {
             $ret;
         }
         Mock Copy-Item { }
+        Mock Watch-Directory { 
+            $watcher = New-MockObject -Type System.IO.FileSystemWatcher
+            $handlers = { }
+
+            $watchObject = [pscustomobject]@{
+                Watcher = $watcher;
+                Handlers = $handlers
+            }
+            return $watchObject
+        }
+        Mock Unwatch-Directory { }
     }
     Context "Normal execution without parameters" {
         BeforeEach {
