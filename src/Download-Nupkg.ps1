@@ -15,11 +15,8 @@ Function Download-Nupkg
         [string]$Verbosity="quiet"
     )
 
-    $_PSBoundParameters = $PSBoundParameters;
-    $_PSBoundParameters.Remove("OutputDirectory")
-    $_PSBoundParameters.Remove("PackageId")
-    
     $tempDirectory = New-TemporaryDirectory
+    $watcherObject = Watch-Directory -Path $($tempDirectory.FullName)
 
     try {
         $startParams = @{
@@ -27,7 +24,7 @@ Function Download-Nupkg
             ArgumentList = @(
                 "install $PackageId",
                 " -OutputDirectory ""$($tempDirectory.FullName)""",
-                " -DirectDownload",
+                #" -DirectDownload",
                 " -NoCache",
                 " -Verbosity $Verbosity"
             )
@@ -43,19 +40,25 @@ Function Download-Nupkg
         }
 
         $startParams.NoNewWindow=$true
-        $startParams.Wait=$true
-        
-        Write-Host "Starting download..."
-        Write-Host $startParams.ArgumentList
-        Start-Process @startParams 
+        $startParams.PassThru=$true
 
-        Write-Host "Flattening nupkgs..."
+        Write-Host "Starting download..."
+        $process = Start-Process @startParams 
+
+        while(-not $process.WaitForExit(10)) {
+            # wait
+        }
+
+        Write-Host "Copying to '$OutputDirectory'..."
         $nupkgs = Get-ChildItem -Recurse -Path $($tempDirectory.FullName) -Include *.nupkg 
         $nupkgs | ForEach-Object { 
             Copy-Item -Path $_.FullName -Destination $OutputDirectory 
         }
     }
     finally {
+        if($null -ne $watcherObject) {
+            Unwatch-Directory -WatcherObject $watcherObject
+        }
         if(Test-Path($tempDirectory.FullName)) {
             Write-Host "Removing $($tempDirectory.FullName).."
             Remove-Item -Force -Recurse -Path $($tempDirectory.FullName)
