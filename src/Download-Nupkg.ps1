@@ -6,36 +6,47 @@ Function Download-Nupkg
     #>    
     Param(
         [Parameter(Mandatory=$true, Position=0)] [string] $PackageId,
-        [Parameter(Position=1)] [string]$Source=$null,
-        [Parameter(Position=2)] [string]$Version,
-        [Parameter(Position=3)] [string]$OutputDirectory=$pwd,
-        [switch]$Prerelease
+        [string]$OutputDirectory=$pwd,
+        [string]$Version,
+
+        [switch]$Prerelease,
+
+        [string]$Source=$null,
+        [string]$Verbosity="quiet"
     )
 
-    $startParams = @{
-        FilePath = 'nuget.exe'
-    }
+    $_PSBoundParameters = $PSBoundParameters;
+    $_PSBoundParameters.Remove("OutputDirectory")
+    $_PSBoundParameters.Remove("PackageId")
     
     $tempDirectory = New-TemporaryDirectory
+
     try {
-        $startParams.ArgumentList = "install $PackageId"
-        $startParams.ArgumentList += " -OutputDirectory ""$($tempDirectory.FullName)"""
-        $startParams.ArgumentList += " -DirectDownload"
-        $startParams.ArgumentList += " -NoCache"
-        if ($Source) {
-            $startParams.ArgumentList += " -Source ""$Source"""
-        }        
-        if ($Version) {
+        $startParams = @{
+            FilePath = 'nuget.exe'
+            ArgumentList = @(
+                "install $PackageId",
+                " -OutputDirectory ""$($tempDirectory.FullName)""",
+                " -DirectDownload",
+                " -NoCache",
+                " -Verbosity $Verbosity"
+            )
+        }
+        if($Version) {
             $startParams.ArgumentList += " -Version $Version"
         }
-        if ($Prerelease) {
+        if($Prerelease) {
             $startParams.ArgumentList += " -Prerelease"
+        }
+        if($Source) {
+            $startParams.ArgumentList += " -Source $Source"
         }
 
         $startParams.NoNewWindow=$true
         $startParams.Wait=$true
         
         Write-Host "Starting download..."
+        Write-Host $startParams.ArgumentList
         Start-Process @startParams 
 
         Write-Host "Flattening nupkgs..."

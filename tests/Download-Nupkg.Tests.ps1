@@ -43,7 +43,7 @@ Describe "Download-Nupkg"  {
             Assert-MockCalled Start-Process -ParameterFilter {
                 $FilePath -eq "nuget.exe" -and
                 $ArgumentList -match "install fooPackage" -and
-                $ArgumentList -match "\s-OutputDirectory ""[^""]+"""
+                $ArgumentList -match "\s-OutputDirectory ""[^""]+""" 
             }
         }    
         It "Copies" {
@@ -65,7 +65,7 @@ Describe "Download-Nupkg"  {
                 $ArgumentList -match "\s-OutputDirectory ""[^""]+""" -and    
                 $ArgumentList -match "\s-Version 1.2.3" -and
                 $ArgumentList -match "\s-Prerelease" -and  
-                $ArgumentList -match "\s-Source ""http://foo/bar"""            
+                $ArgumentList -match "\s-Source http://foo/bar"            
             }
         }  
         It "Copies" {
