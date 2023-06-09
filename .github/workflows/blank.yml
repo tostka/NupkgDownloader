@@ -34,6 +34,14 @@ jobs:
           # Arguments to pass to Chocolatey
           args: pack -version 1.0.0
 
+      - name: GitVersion action
+        # You may pin to the exact commit or the version.
+        # uses: nmcc/actions-gitversion@4ab384d333506ede37c82ca3e03f4005b18b7573
+        uses: nmcc/actions-gitversion@v1
+        with:
+          # Path to the gitversion executable
+          path-to-gitversion: packages/GitVersion.CommandLine/tools/GitVersion.exe
+
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
