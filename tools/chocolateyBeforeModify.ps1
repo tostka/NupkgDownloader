@@ -1,4 +1,4 @@
 ﻿
 $ErrorActionPreference = 'SilentlyContinue'
 
-Remove-Module VerintPM
+Remove-Module NupkgDownloader
