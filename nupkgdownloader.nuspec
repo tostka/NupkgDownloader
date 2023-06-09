@@ -11,10 +11,10 @@
     <projectSourceUrl>https://github.com/rossobianero/NupkgDownloader</projectSourceUrl>
     <tags>rossobianero NupkgDownloader</tags>
     <description>Powershell module for retrieving packages from a nuget feed</description>
-  </metadata>
-  <dependencies>
-      <dependency id="nuget.commandline" />
-  </dependencies>
+    <dependencies>
+        <dependency id="nuget.commandline" />
+    </dependencies>
+    </metadata>
   <files>
     <file src="tools/*" target="tools" />
     <file src="src/*" target="src" />
