@@ -1,4 +1,3 @@
-
 @{
     ModuleVersion = '#{MajorMinorPatch}#'
     GUID = '3000dc5a-96fb-49b7-a6b7-d3d0af6c8409'
