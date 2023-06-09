@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>NupkgDownloader</id>
+    <title>NupkgDownloader</title>
+    <version>$version$</version>
+    <owners>rossobianero</owners>
+    <authors>rossobianero</authors>
+    <copyright>Copyright © rossobianero</copyright>
+    <projectUrl>https://github.com/rossobianero/NupkgDownloader</projectUrl>
+    <projectSourceUrl>https://github.com/rossobianero/NupkgDownloader</projectSourceUrl>
+    <tags>rossobianero NupkgDownloader</tags>
+    <description>Powershell module for retrieving packages from a nuget feed</description>
+  </metadata>
+  <dependencies>
+      <dependency id="nuget.commandline" />
+  </dependencies>
+  <files>
+    <file src="tools/*" target="tools" />
+    <file src="src/*" target="src" />
+    <file src="NupkgDownloaderPM.ps*" />
+  </files>
+</package>
