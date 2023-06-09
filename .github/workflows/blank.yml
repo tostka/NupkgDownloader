@@ -34,3 +34,9 @@ jobs:
           # Arguments to pass to Chocolatey
           args: pack -version 1.0.0
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: nupkg-artifact
+          path: |
+            **/*.nupkg
