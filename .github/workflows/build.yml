@@ -13,6 +13,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+env:
+  OutputDirectory: ${{ github.workspace}}/output
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -42,11 +45,10 @@ jobs:
         uses: crazy-max/ghaction-chocolatey@v2.2.0
         with:
           # Arguments to pass to Chocolatey
-          args: "pack -version ${{ env.GitVersion_NuGetVersionV2 }}"
+          args: "pack -version ${{ env.GitVersion_NuGetVersionV2 }} --outputDirectory ${{ env.OutputDirectory }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: nupkg-artifact
-          path: |
-            **/*.nupkg
+          path: ${{ env.OutputDirectory }}/*.nupkg
