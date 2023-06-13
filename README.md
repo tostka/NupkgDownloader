@@ -15,3 +15,4 @@ Once installed, run the command as follows (e.g. this will download fooPackage v
 ```
 Download-Nupkg fooPackage -Version 1.2.3 -OutputDirectory c:\temp\install -Source "https://community.chocolatey.org/api/v2/"
 ```
+
