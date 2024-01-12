@@ -20,11 +20,13 @@ Function Save-NuGetPackage {
     AddedWebsite: http://www.toddomation.com
     AddedTwitter: @tostka / http://twitter.com/tostka
     REVISIONS
-    * 2:44 PM 1/12/2024 fork & tweak: fix broken psd1 (regen full: missing ModuleVersion); expand CBH; alias & ren to stock verb: Download-Nupkg -> Save-NuGetPackage ; 
+    * 4:53 PM 1/12/2024 fork & tweak: fix broken psd1 (regen full: missing ModuleVersion); expand CBH; alias & ren to stock verb: Download-Nupkg -> Save-NuGetPackage ; 
         corrected mixed function names (between Add-DirectoryWatch.ps1 & Download-Nupkg.ps1: Alias Watch-Directory & Unwatch-Directory to Add-DirectoryWatch & Remove-DirectoryWatch, update on this end)
         moved freestanding Add-DirectoryWatch() & Remove-Directory() as backup internal (moving set to verb-IO mod); 
         add pipeline support (flip $packageID to array and ValueFromPipeline=$true, adv func & proc loop
         added ThrottleDelay (try to avoid choco pushback)
+        moved new-TemporaryGuidDirectory into begin block as well - make it self contained (and leaf funcs covered in verb-io mod)
+        Added RateLimit Throttling, to 50% of the $limitPkgsPerMin (20 per current docs)
     * 6/9/23 rossobianero posted version
     .DESCRIPTION
     Save-NuGetPackage - Downloads a NUPKG and dependencies from Azure DevOps artifacts using NUGET
@@ -53,6 +55,10 @@ Function Save-NuGetPackage {
     ---
 
     ## On Chocolatey Throttling
+    
+    Installations/downloads of Chocolatey itself (chocolatey.nupkg) are rate limited at about 5 per minute per IP address - temporary ban expires after 1 hour.
+    All other packages are rate limited at about 20 per minute per IP address - temporary ban expires after 1 hour.
+
 
         [Excessive Use - Chocolatey Software Docs | community.chocolatey.org Packages Disclaimer](https://docs.chocolatey.org/en-us/community-repository/community-packages-disclaimer#excessive-use)
         ...
@@ -118,7 +124,7 @@ Function Save-NuGetPackage {
     PS> Save-NuGetPackage notepad2,curl -Destination d:\tmp\chococache -Source Chocolatey
     Download latest verison of notepad2 & curl to d:\tmp\chococache, from the Choolatey Community Feed (designated by the Chocolatey keyword)
     .EXAMPLE
-    PS> ' awk','grep ' |Save-NuGetPackage awk,grep -Destination d:\tmp\chococache -Source Chocolatey
+    PS> 'awk','grep ' |Save-NuGetPackage -Destination d:\tmp\chococache -Source Chocolatey
     Demo pipeline support: Download latest verison of awk & grep to d:\tmp\chococache, from the Choolatey Community Feed (designated by the Chocolatey keyword)
     .LINK
     https://github.com/tostka/NupkgDownloader
@@ -154,16 +160,17 @@ Function Save-NuGetPackage {
         if(-not (get-variable -name ProgressCounterReset -Scope global -ErrorAction SilentlyContinue)){$global:ProgressCounterReset=25}
         if(-not (get-variable -name ProgressCounterMax -Scope global -ErrorAction SilentlyContinue)){$global:ProgressCounterMax=100}
         if(-not (get-variable -name ProgressCounter -Scope global -ErrorAction SilentlyContinue)){$global:ProgressCounter=$global:ProgressCounterStart}
+        $chocoDefaultSource = "https://community.chocolatey.org/api/v2/"  ; 
+        $limitPkgsPerMin = 20 ; 
 
         if($Source -eq 'Chocolatey'){
-            write-verbose "Flip -Source:$($Source) -> https://community.chocolatey.org/api/v2/" ;
-            $Source = "https://community.chocolatey.org/api/v2/" 
+            write-verbose "Flip -Source:$($Source) -> $($chocoDefaultSource)" ;
+            $Source = $chocoDefaultSource
         } ; 
         if(-not $ThrottleDelay -AND ((get-variable -name ThrottleMs -ea 0).value)){
             $ThrottleDelay = $ThrottleMs ; 
             $smsg = "(no -ThrottleDelay specified, but found & using `$global:ThrottleMs:$($ThrottleMs)ms" ; 
-            if($verbose){if ($logging) { Write-Log -LogContent $smsg -Path $logfile -useHost -Level VERBOSE } 
-            else{ write-verbose "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; } ; 
+            write-verbose "$((get-date).ToString('HH:mm:ss')):$($smsg)"; 
         } ; 
         #*------v Function Add-DirectoryWatch v------
         if(-not (get-command Add-DirectoryWatch -ea 0)){
@@ -360,6 +367,66 @@ Function Save-NuGetPackage {
             }
         } ;
         #*------^ END Function Remove-DirectoryWatch ^------
+        #*------v Function New-TemporaryGuidDirectory v------
+        if(-not (get-command Remove-DirectoryWatch -ea 0)){
+            Function New-TemporaryGuidDirectory {
+             <#
+                .SYNOPSIS
+                New-TemporaryGuidDirectory - Creates a directory named with a GUID in the user's TEMP path
+                .NOTES
+                Version     : 0.0.2
+                Author      : rossobianero
+                Website     : https://github.com/rossobianero
+                Twitter     : 
+                CreatedDate : 2024-01-12
+                FileName    : New-TemporaryGuidDirectory.ps1
+                License     : (none asserted)
+                Copyright   : (none asserted)
+                Github      : https://github.com/tostka/NupkgDownloader
+                Tags        : Powershell,NuPackage,Chocolatey,Package
+                AddedCredit : Todd Kadrie
+                AddedWebsite: http://www.toddomation.com
+                AddedTwitter: @tostka / http://twitter.com/tostka
+                REVISIONS
+                * 12:05 PM 1/12/2024 fork & tweak: Alias & rename more descriptively New-TemporaryDirectory -> New-TemporaryGuidDirectory; added CBH; stick into verb-IO
+                * 6/9/23 rossobianero posted version
+                .DESCRIPTION
+                New-TemporaryGuidDirectory - Downloads a NUPKG and dependencies from Azure DevOps artifacts using NUGET
+
+                .INPUTS
+                None. Does not accepted piped input.
+                .OUTPUTS
+                System.IO.DirectoryInfo object
+                .EXAMPLE
+                PS> $tempDirectory = New-TemporaryGuidDirectory 
+                PS> $tempDirectory
+
+                        Directory: C:\Users\USERNAME\AppData\Local\Temp\5
+
+
+                    Mode                LastWriteTime         Length Name                                                                                                                                       
+                    ----                -------------         ------ ----                                                                                                                                       
+                    d-----        1/12/2024   1:38 PM                3e9424eb-7211-4e70-87cb-42922bae5e75    
+        
+
+                Creates a new guid-named dir below $env:TEMP
+                .LINK
+                https://github.com/tostka/NupkgDownloader
+                .LINK
+                https://github.com/rossobianero/NupkgDownloader
+                .LINK
+                #>
+                [CmdletBinding()]
+                [Alias('New-TemporaryDirectory')]
+                Param()
+                $parent = [System.IO.Path]::GetTempPath()
+                [string] $name = [System.Guid]::NewGuid()
+                $tempDir= $(New-Item -ItemType Directory -Path (Join-Path $parent $name))
+                Write-Host "Created temp directory '$($tempDir.FullName)'"
+                return $tempDir
+            }
+        } ;
+        #*------^ END Function New-TemporaryGuidDirectory ^------
 
         if(-not (test-path -path $Destination.fullname -PathType Container)){
             TRY{
@@ -384,12 +451,17 @@ Function Save-NuGetPackage {
             #else{ write-verbose "$((get-date).ToString('HH:mm:ss')):$($smsg)" } ; } ; 
         } ;
         
+        # $limitPkgsPerMin 
+        $PkgsThisMin = 0 ;
+        $TimeStart = $null ; 
     } ;  # BEGIN-E
     PROCESS {
         foreach($item in $PackageId) {
         
             $smsg = $sBnrS="`n#*------v PROCESSING : $($item) v------" ; 
             write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)"  ;
+
+            $TimeStart = (get-date )  ; 
 
             $tempDirectory = New-TemporaryGuidDirectory
             $watcherObject = Add-DirectoryWatch -Path $($tempDirectory.FullName)
@@ -455,9 +527,31 @@ Function Save-NuGetPackage {
             $smsg = "$($sBnrS.replace('-v','-^').replace('v-','^-'))" ;
             write-host -foregroundcolor green "$((get-date).ToString('HH:mm:ss')):$($smsg)"  ;
 
+            # RateLimit Throttle to 50% of $limitPkgsPerMin
+            $ElapsedTime = (Get-Date) - $TimeStart
+            if($ElapsedTime.totalminutes -lt 1){
+                $PkgsThisMin ++ ; 
+            } else {
+                $PkgsThisMin = 0
+                $TimeStart = (get-date )  ; 
+            }; 
+            write-verbose "Aiming to stay 50% below RateLimit, so we only approach *half* the permitted rate limit" ; 
+            write-verbose "Rate:$($PkgsThisMin)/$(($limitPkgsPerMin/2))" ; 
+            if($PkgsThisMin -gt ($limitPkgsPerMin/2)){
+                write-host "Rate:$($PkgsThisMin)/$(($limitPkgsPerMin/2)):pausing while a minute completes..." ; 
+                $a=1 ; 
+                [int]$waits = ((1 - $elapsedtime.totalminutes) * 60) ;
+                Do {write-host -NoNewline ".$($waits)" ; start-sleep -Seconds 1 ; $waits--} 
+                While ($waits -gt 0) ;
+                $PkgsThisMin = 0
+                $TimeStart = (get-date )  ; 
+            } 
+
+            <# strict time wait throttle
             if($ThrottleDelay){
                 start-sleep -Milliseconds $ThrottleDelay ; 
             } ; 
+            #>
         } ;  # loop-E
     } ;  # PROC-E
 } ; 
